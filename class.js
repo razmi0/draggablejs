@@ -8,8 +8,8 @@
 
 //---------------------------------------------------//
 //
-// Class methods : #ItemElement(), #isObject(), #mergeDeep() , whatDevice(),
-//                 #startMoving(), #whileMoving(), #endMoving(), #colors(), 
+// Class methods : #setElement(), #isObject(), #mergeDeep() , #whatDevice(),
+//                 #startMoving(), #whileMoving(), #endMoving(), #colors(),
 //                  render()
 //
 //---------------------------------------------------//
@@ -17,8 +17,8 @@
 //---------------------------------------------------//
 //
 //  The options object allows you to customize the element to be created.
-//- Options are : the element type, the element classes, 
-//                the element id, the element inner text, a boolean 
+//- Options are : the element type, the element classes,
+//                the element id, the element inner text, a boolean
 //                "random" that allow you to set random colors to the
 //                element being created. If random is set to true, you can set
 //                the opacity of the background color, the coefficient of
@@ -26,36 +26,20 @@
 //
 //---------------------------------------------------//
 
-
 /**
  * @class Dragify - class for creating draggable items
  */
+
 export default class Dragify {
-  constructor(parent = document.querySelector("body"), options = {}) {
-    const defaultOptions = {
-      elementType: "div",
-      elementClass: '',
-      elementId: Date.now() + Math.floor(Math.random() * 1000),
-      elementText: "",
-      elementColor: {
-        random: true,
-        colorEdge: {
-          opacity: 1,
-          coefficient: 1,
-          darker: true,
-        },
-      },
-    };
+  constructor(userOptions = {}, parent = document.querySelector("body")) {
     this.initial_X = 0;
     this.initial_Y = 0;
     this.moving = false;
-    !Object.keys(options).length
-      ? (this.options = defaultOptions)
-      : (this.options = this.#mergeDeep(defaultOptions, options));
     this.parent = parent;
-    this.device = this.whatDevice();
-    this.element = document.createElement(this.options.elementType);
-    this.#itemElement();
+    this.template = null;
+    this.#whatDevice();
+    this.#setOptions(userOptions);
+    this.#setElement();
     this.#startMoving();
     this.#whileMoving();
     this.#endMoving();
@@ -63,61 +47,98 @@ export default class Dragify {
 
   /**
    * @description - Build the element attributes
-   * @param {HTMLElement} element
-   * @param {object} this.options
    */
 
-  #itemElement() {
-    this.element.id = this.options.elementId;
+  #setElement() {
+    this.element = document.createElement(this.options.elementType);
+    this.element.id = this.options.elementId.toString();
     this.element.className = this.options.elementClass;
     this.element.textContent = this.options.elementText;
-    if (this.options.elementColor.random) {
-      this.#colors();
-    }
+    this.#colors();
     this.element.style.position = "absolute";
+    this.template = `
+      <${this.options.elementType}
+      id="${this.options.elementId}"
+      class="${this.options.elementClass}"
+      style="position: absolute; top: 0; left: 0;">
+      ${this.options.elementText}
+      </${this.options.elementType}>
+    `;
   }
+
   /**
    * @description - Evaluate if item is an object. Used in #mergeDeep()
-   * @param {*} item 
+   * @param {*} item
    * @returns {boolean}
    */
+
   #isObject(item) {
     return item && typeof item === "object" && !Array.isArray(item);
   }
+
   /**
    * @description - Recursively merge the default options object until all the user options object is merged
    *                and return the merged object to the constructor.
-   * @param {Object} options 
-   * @param  {...Object} defaultOptions
+   * @param {Object} defaultOptions
+   * @param  {...Object} userOptions
    * @returns {Object} merged object
    */
-  #mergeDeep(options, ...defaultOptions) {
-    const source = defaultOptions.shift();
-    if (this.#isObject(options) && this.#isObject(source)) {
+
+  #mergeDeep(defaultOptions, ...userOptions) {
+    const source = userOptions.shift();
+    console.log("1");
+    if (this.#isObject(defaultOptions) && this.#isObject(source)) {
+      console.log("2");
       for (const key in source) {
+        console.log("3");
         if (this.#isObject(source[key])) {
-          if (!options[key]) {
-            Object.assign(options, { [key]: {} })
-          };
-          this.#mergeDeep(options[key], source[key]);
+          console.log("4");
+          if (!defaultOptions[key]) {
+            Object.assign(defaultOptions, { [key]: {} });
+          }
+          console.log("5");
+          this.#mergeDeep(defaultOptions[key], source[key]);
+        } else {
+          console.log("6");
+          Object.assign(defaultOptions, { [key]: source[key] });
         }
-        else {
-          Object.assign(options, { [key]: source[key] });
-        }
+        console.log("7");
       }
+      console.log("8");
     }
-    return options;
+    console.log("9");
+    return defaultOptions;
   }
 
   /**
-   * @description - To detect if device support touch event, mouse event, whatDevice() use a combination of
+   * @description - Set the options object. If the userOptions object is empty, the defaultOptions object will be used.
+   *                If the userOptions object is not empty, the defaultOptions object will be merged with the userOptions object.
+   *                The mergeDeep() method will recursively merge the defaultOptions object until all the userOptions object is merged.
+   * @param {Object} userOptions
+   */
+
+  #setOptions(userOptions) {
+    const defaultOptions = {
+      elementType: "div",
+      elementClass: "",
+      elementId: Date.now() + Math.floor(Math.random() * 1000),
+      elementText: "",
+      colorRandom: true,
+    };
+    Object.keys(userOptions).length > 0
+      ? (this.options = this.#mergeDeep(defaultOptions, userOptions))
+      : (this.options = structuredClone(defaultOptions));
+  }
+
+  /**
+   * @description - To detect if device support touch event, mouse event, #whatDevice() use a combination of
    *                navigator.userAgent.includes("mobile") and maxTouchPoints.
    *                It will postulate that if the device is a mobile device, it will not have a mouseEvent.
    *                Hybrid is not considered.
    * @returns {object} deviceType with appropriate events
    */
 
-  whatDevice() {
+  #whatDevice() {
     let device = {
       type: null,
       touchEvent: null,
@@ -143,7 +164,7 @@ export default class Dragify {
       device.events.move = "mousemove";
       device.events.up = "mouseup";
     }
-    return device;
+    this.device = device;
   }
 
   /**
@@ -196,29 +217,34 @@ export default class Dragify {
    */
 
   #endMoving() {
-    this.element.addEventListener(this.device.events.up, () => {
-      this.element.moving = false;
-    });
+    this.element.addEventListener(
+      this.device.events.up,
+      () => {
+        this.element.moving = false;
+      },
+      { passive: true }
+    );
+    this.element.addEventListener(
+      "mouseleave",
+      () => {
+        this.element.moving = false;
+      },
+      { passive: true }
+    );
   }
 
   /**
-   * @description - set a random color to the item if the options.elementColor.random is set to true
-   * @param {object} this.options
+   * @description - set a random color to the item if the options.colorRandom is set to true
+   *
    */
 
   #colors() {
-    let r = Math.floor(Math.random() * 255);
-    let g = Math.floor(Math.random() * 255);
-    let b = Math.floor(Math.random() * 255);
-    let a = this.options.elementColor.colorEdge.opacity;
-    if (this.options.elementColor.colorEdge.darker) {
-      r = r * this.options.elementColor.colorEdge.coefficient;
-      g = g * this.options.elementColor.colorEdge.coefficient;
-      b = b * this.options.elementColor.colorEdge.coefficient;
-      a = a * this.options.elementColor.colorEdge.coefficient;
-      this.element.style.borderColor = `rgb(${r},${g},${b},${a})`;
+    if (this.options.colorRandom) {
+      let r = Math.floor(Math.random() * 255);
+      let g = Math.floor(Math.random() * 255);
+      let b = Math.floor(Math.random() * 255);
+      this.element.style.backgroundColor = `rgb(${r},${g},${b})`;
     }
-    this.element.style.backgroundColor = `rgb(${r},${g},${b},${a})`;
   }
 
   /**

@@ -1,20 +1,22 @@
-//test project for Dragify
+//---------------------------//
+//Test project for Dragify
+//---------------------------//
 
-import Dragify from '/class.js';
+import Dragify from '/draggablejs/class.js';
 
 const options = {
-    elementClass : 'my-class select blabla',
-    elementId : 'my-ID',
-    elementColor: {
-        random: false,
-        colorEdge: {
-            darker: false,
-        }
-    },
+  elementClass: "parent",
+  elementText: "Parent",
 };
 
-const parent = document.querySelector('section');
-
-const element = new Dragify(parent);
-console.log(element);
+const defaultOptions = {
+  elementType: "div",
+  elementClass: "",
+  elementId: Date.now() + Math.floor(Math.random() * 1000),
+  elementText: "",
+  colorRandom: true
+};
+const element = new Dragify(options);
 element.render();
+console.trace(element);
+
